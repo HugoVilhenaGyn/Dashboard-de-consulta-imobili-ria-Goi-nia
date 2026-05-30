@@ -1357,7 +1357,14 @@ function cleanRow(row,fileName){
     if(v===null||v===undefined){out[k]=null;continue;}
     if(typeof v==='number'){out[k]=isNaN(v)?null:(v%1===0?Math.trunc(v):v);}
     else if(v instanceof Date){out[k]=isNaN(v)?null:v.toISOString();}
-    else if(typeof v==='string'){out[k]=v.trim()||null;}
+    else if(typeof v==='string'){
+      const s=v.trim();
+      if(!s){out[k]=null;continue;}
+      // Converter datas no formato brasileiro DD/MM/YYYY [HH:MM[:SS]] para ISO
+      const bd=/^(\d{2})\/(\d{2})\/(\d{4})(?:[T\s](\d{2}):(\d{2})(?::(\d{2}))?)?$/.exec(s);
+      if(bd){const iso=new Date(`${bd[3]}-${bd[2]}-${bd[1]}T${bd[4]||'00'}:${bd[5]||'00'}:${bd[6]||'00'}`);out[k]=isNaN(iso.getTime())?s:iso.toISOString();}
+      else{out[k]=s;}
+    }
     else{out[k]=v;}
   }
   if(validCols.has('_arquivo_origem'))out['_arquivo_origem']=fileName;
