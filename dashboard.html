@@ -727,13 +727,13 @@ const META = new Set(['_arquivo_origem','_pasta_origem','_dt_importacao']);
 const QCOLS = ['nomeEdificio','NomeContribuinte','nomeBairro','Endereco','CPF_CNPJ','nomeLogradouro','incompl'];
 
 const UT = {
-  APT:  'or=(incompl.ilike.APT*,incompl.ilike.APTO*)',
-  BOX:  'incompl=ilike.BOX*',
-  SALA: 'or=(incompl.ilike.SALA*,incompl.ilike.SL*)',
-  ESC:  'incompl=ilike.ESC*',
-  LOJA: 'or=(incompl.ilike.LOJA*,incompl.ilike.LJ*)',
-  RES:  'or=(incompl.ilike.RES*,incompl.ilike.CASA*,incompl.ilike.RESID*)',
-  TER:  'or=(incompl.ilike.TER*,incompl.ilike.TERR*)',
+  APT:  ['incompl.ilike.APT*','incompl.ilike.APTO*'],
+  BOX:  ['incompl.ilike.BOX*'],
+  SALA: ['incompl.ilike.SALA*','incompl.ilike.SL*'],
+  ESC:  ['incompl.ilike.ESC*'],
+  LOJA: ['incompl.ilike.LOJA*','incompl.ilike.LJ*'],
+  RES:  ['incompl.ilike.RES*','incompl.ilike.CASA*','incompl.ilike.RESID*'],
+  TER:  ['incompl.ilike.TER*','incompl.ilike.TERR*'],
 };
 
 // ─── State ────────────────────────────────────────────
@@ -743,8 +743,10 @@ let _curRows   = [];
 let colTypes   = {};
 let curPage    = 0;
 let totalRows  = 0;
+let activeUT   = new Set();
+let _searchAbort = null;
+let _qDeb;
 let busy       = false;
-let activeUT   = '';
 const upLog    = [];
 
 // ═══════════════════════════════════════════════════════
@@ -838,12 +840,16 @@ async function initApp() {
     }
     wireAC('nomeEdificio');
     wireAC('nomeBairro');
+    // Busca automática ao digitar (debounced 400ms) + Enter imediato
     ['q','fi-area-min','fi-area-max'].forEach(id => {
-      document.getElementById(id)?.addEventListener('keydown', e => { if(e.key==='Enter') doSearch(); });
+      const el = document.getElementById(id); if (!el) return;
+      el.addEventListener('keydown', e => { if(e.key==='Enter'){ clearTimeout(_qDeb); doSearch(); } });
+      el.addEventListener('input', () => { clearTimeout(_qDeb); _qDeb = setTimeout(doSearch, 400); });
     });
-    document.querySelectorAll('.dyn').forEach(el =>
-      el.addEventListener('keydown', e => { if(e.key==='Enter') doSearch(); })
-    );
+    document.querySelectorAll('.dyn').forEach(el => {
+      el.addEventListener('keydown', e => { if(e.key==='Enter'){ clearTimeout(_qDeb); doSearch(); } });
+      el.addEventListener('input',   () => { clearTimeout(_qDeb); _qDeb = setTimeout(doSearch, 400); });
+    });
     fetchTotalCount();
     await search(0);
   } catch(e) {
@@ -885,7 +891,10 @@ function buildQuery(limit, offset) {
   if (!isNaN(aMin) && aMin > 0) parts.push(`areaEdificio=gte.${Math.round(aMin*100)}`);
   if (!isNaN(aMax) && aMax > 0) parts.push(`areaEdificio=lte.${Math.round(aMax*100)}`);
 
-  if (activeUT && UT[activeUT]) parts.push(UT[activeUT]);
+  if (activeUT.size > 0) {
+    const conds = [...activeUT].flatMap(k => UT[k] || []);
+    if (conds.length) parts.push(`or=(${conds.join(',')})`);
+  }
 
   return parts.join('&');
 }
@@ -893,8 +902,8 @@ function buildQuery(limit, offset) {
 // ═══════════════════════════════════════════════════════
 //  FETCH
 // ═══════════════════════════════════════════════════════
-async function fetchPage(limit, offset) {
-  const r = await api(`${BASE}?${buildQuery(limit,offset)}`, { headers:{ Prefer:'count=exact' } });
+async function fetchPage(limit, offset, signal) {
+  const r = await api(`${BASE}?${buildQuery(limit,offset)}`, { headers:{ Prefer:'count=exact' }, signal });
   if (!r.ok) { const e=await r.json().catch(()=>({})); throw new Error(e.message||e.code||`HTTP ${r.status}`); }
   const count = parseInt((r.headers.get('Content-Range')||'').replace(/.*\//,'') || '0');
   return { rows: await r.json(), count };
@@ -904,10 +913,13 @@ async function fetchPage(limit, offset) {
 //  SEARCH
 // ═══════════════════════════════════════════════════════
 async function search(pg) {
+  if (_searchAbort) _searchAbort.abort();
+  _searchAbort = new AbortController();
+  const signal = _searchAbort.signal;
   curPage = pg;
   setState('load');
   try {
-    const { rows, count } = await fetchPage(CFG.perPg, pg*CFG.perPg);
+    const { rows, count } = await fetchPage(CFG.perPg, pg*CFG.perPg, signal);
     totalRows = count;
 
     const pages = Math.ceil(count/CFG.perPg) || 1;
@@ -920,7 +932,7 @@ async function search(pg) {
     document.getElementById('s-pages').textContent   = fmt(pages);
 
     document.getElementById('tb-info').innerHTML = count > 0
-      ? `<strong>${fmt(count)}</strong> resultado(s)${activeUT?` · ${activeUT}`:''} — exibindo ${fmt(s)} a ${fmt(e)}`
+      ? `<strong>${fmt(count)}</strong> resultado(s)${activeUT.size>0?` · ${[...activeUT].join('+')}`:''} — exibindo ${fmt(s)} a ${fmt(e)}`
       : 'Nenhum resultado encontrado';
     document.getElementById('pg-top').textContent = pages>1 ? `${pg+1}/${pages}` : '';
 
@@ -934,6 +946,7 @@ async function search(pg) {
     renderTable(rows);
     updateFTags();
   } catch(e) {
+    if (e.name === 'AbortError') return;
     setState('err');
     document.getElementById('err-msg').textContent = e.message;
   }
@@ -948,7 +961,7 @@ function hasFilter() {
   if ([...document.querySelectorAll('.dyn')].some(el=>el.value.trim())) return true;
   if (!isNaN(parseFloat(document.getElementById('fi-area-min').value))) return true;
   if (!isNaN(parseFloat(document.getElementById('fi-area-max').value))) return true;
-  if (activeUT) return true;
+  if (activeUT.size > 0) return true;
   return false;
 }
 
@@ -958,21 +971,27 @@ function clearFilters() {
   document.getElementById('fi-area-max').value = '';
   document.querySelectorAll('.dyn').forEach(el => el.value='');
   closeAC();
-  activeUT = '';
-  document.querySelectorAll('.chip').forEach((b,i) => {
-    const c = b.className.replace(/ on\S*/g,'');
-    b.className = c + (i===0?' on':'');
-  });
+  activeUT.clear();
+  updateChipsUI();
   doSearch();
 }
 
-function setUT(btn) {
-  activeUT = btn.dataset.ut;
-  const utClass = { APT:'on', BOX:'on on-box', SALA:'on on-sala', ESC:'on on-esc', LOJA:'on on-loja', RES:'on on-res', TER:'on on-ter', '':'on' };
+const _utClass = { APT:'on', BOX:'on on-box', SALA:'on on-sala', ESC:'on on-esc', LOJA:'on on-loja', RES:'on on-res', TER:'on on-ter' };
+
+function updateChipsUI() {
   document.querySelectorAll('.chip').forEach(b => {
+    const ut = b.dataset.ut;
     b.className = b.className.replace(/ on\S*/g,'');
-    if (b===btn) b.className += ' ' + (utClass[activeUT]||'on');
+    if (ut === '') { if (activeUT.size === 0) b.className += ' on'; }
+    else if (activeUT.has(ut)) b.className += ' ' + (_utClass[ut] || 'on');
   });
+}
+
+function setUT(btn) {
+  const ut = btn.dataset.ut;
+  if (ut === '') { activeUT.clear(); }
+  else { activeUT.has(ut) ? activeUT.delete(ut) : activeUT.add(ut); }
+  updateChipsUI();
   doSearch();
 }
 
@@ -1139,11 +1158,10 @@ function updateFTags() {
   const q = document.getElementById('q').value.trim();
   if (q) addTag(`Busca: <strong>"${q}"</strong>`, ()=>{document.getElementById('q').value='';doSearch();});
 
-  if (activeUT) {
+  if (activeUT.size > 0) {
     const lbl={APT:'Apartamento',BOX:'Box/Garagem',SALA:'Sala/Comercial',ESC:'Escaninho',LOJA:'Loja',RES:'Residência',TER:'Terreno'};
-    addTag(`Tipo: <strong>${lbl[activeUT]}</strong>`, ()=>{
-      activeUT=''; document.querySelectorAll('.chip').forEach((b,i)=>{ b.className=b.className.replace(/ on\S*/g,'')+(i===0?' on':''); }); doSearch();
-    });
+    const names = [...activeUT].map(k=>lbl[k]||k).join(', ');
+    addTag(`Tipo: <strong>${names}</strong>`, ()=>{ activeUT.clear(); updateChipsUI(); doSearch(); });
   }
 
   document.querySelectorAll('.dyn').forEach(el => {
