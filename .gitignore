@@ -24,9 +24,10 @@ build/
 *.log
 log_upload.txt
 
-# IDE
+# IDE e ferramentas locais
 .vscode/
 .idea/
+.claude/
 *.swp
 
 # OS
