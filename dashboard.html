@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Imóveis</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1e3a8a;
+            --primary-light: #3b82f6;
+            --primary-dark: #0f172a;
+            --secondary: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-400: #9ca3af;
+            --gray-600: #4b5563;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--gray-50);
+            color: var(--gray-900);
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* HEADER */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo::before {
+            content: '🏢';
+            font-size: 1.75rem;
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .user-info {
+            text-align: right;
+            font-size: 0.875rem;
+        }
+
+        .user-name {
+            font-weight: 600;
+        }
+
+        .user-role {
+            opacity: 0.9;
+            font-size: 0.8rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            font-size: 0.875rem;
+        }
+
+        .btn-primary {
+            background: var(--primary-light);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #059669;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-sm {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.75rem;
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: white;
+            border: 1px solid white;
+        }
+
+        .btn-outline:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* MAIN CONTENT */
+        .main {
+            display: flex;
+            height: calc(100vh - 80px);
+        }
+
+        .sidebar {
+            width: 280px;
+            background: white;
+            border-right: 1px solid var(--gray-200);
+            overflow-y: auto;
+            padding: 1.5rem 0;
+        }
+
+        .sidebar-section {
+            margin-bottom: 2rem;
+        }
+
+        .sidebar-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--gray-600);
+            padding: 0.5rem 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--gray-600);
+            font-weight: 500;
+        }
+
+        .sidebar-item:hover {
+            background: var(--gray-100);
+            color: var(--primary);
+            padding-left: 2rem;
+        }
+
+        .sidebar-item.active {
+            background: var(--gray-100);
+            color: var(--primary);
+            border-left: 3px solid var(--primary);
+            padding-left: calc(1.5rem - 3px);
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+
+        /* CARDS */
+        .card {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--gray-900);
+        }
+
+        /* FILTROS */
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .filter-label {
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--gray-700);
+        }
+
+        .filter-input,
+        .filter-select {
+            padding: 0.5rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+
+        .filter-input:focus,
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        /* TABELA */
+        .table-container {
+            overflow-x: auto;
+            border-radius: 0.5rem;
+            border: 1px solid var(--gray-200);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        thead {
+            background: var(--gray-100);
+            border-bottom: 2px solid var(--gray-200);
+        }
+
+        th {
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--gray-700);
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        tbody tr:hover {
+            background: var(--gray-50);
+        }
+
+        /* MODAL */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 25px rgba(0,0,0,0.15);
+        }
+
+        .modal-header {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .modal-body {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--gray-700);
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        /* STATS */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            border-left: 4px solid var(--primary-light);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* ALERTS */
+        .alert {
+            padding: 1rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid var(--secondary);
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #7f1d1d;
+            border-left: 4px solid var(--danger);
+        }
+
+        .alert-info {
+            background: #dbeafe;
+            color: #0c2d6b;
+            border-left: 4px solid var(--primary-light);
+        }
+
+        /* LOGIN */
+        .login-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+        }
+
+        .login-box {
+            background: white;
+            padding: 3rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 20px 25px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-title {
+            font-size: 1.875rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            text-align: center;
+            color: var(--primary);
+        }
+
+        .login-subtitle {
+            text-align: center;
+            color: var(--gray-600);
+            margin-bottom: 2rem;
+            font-size: 0.875rem;
+        }
+
+        /* HIDDEN */
+        .hidden {
+            display: none !important;
+        }
+
+        /* LOADING */
+        .loading {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid var(--gray-300);
+            border-top-color: var(--primary-light);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .main {
+                flex-direction: column;
+                height: auto;
+            }
+
+            .sidebar {
+                width: 100%;
+                max-height: 300px;
+                border-right: none;
+                border-bottom: 1px solid var(--gray-200);
+                display: flex;
+                overflow-x: auto;
+            }
+
+            .sidebar-section {
+                flex: 0 0 auto;
+                border-right: 1px solid var(--gray-200);
+                margin-bottom: 0;
+                padding-right: 1rem;
+            }
+
+            .content {
+                padding: 1rem;
+            }
+
+            .filters {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- LOGIN PAGE -->
+<div id="loginPage" class="login-container">
+    <div class="login-box">
+        <div class="login-title">🏢 Dashboard Imóveis</div>
+        <div class="login-subtitle">Sistema de Consulta de Propriedades</div>
+
+        <div id="loginError" class="alert alert-error hidden"></div>
+
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label class="form-label">Usuário</label>
+                <input type="text" id="username" class="form-input" required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Senha</label>
+                <input type="password" id="password" class="form-input" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%;">
+                Entrar
+            </button>
+        </form>
+
+        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--gray-200); text-align: center; font-size: 0.875rem; color: var(--gray-600);">
+            <strong>Credenciais padrão:</strong><br>
+            Usuário: admin<br>
+            Senha: admin123
+        </div>
+    </div>
+</div>
+
+<!-- DASHBOARD PAGE -->
+<div id="dashboardPage" class="hidden">
+    <!-- HEADER -->
+    <div class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">Dashboard Imóveis</div>
+                <div class="user-menu">
+                    <div class="user-info">
+                        <div class="user-name" id="userDisplayName"></div>
+                        <div class="user-role" id="userDisplayRole"></div>
+                    </div>
+                    <button class="btn btn-outline" onclick="logout()">Sair</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-title">Menu</div>
+                <div class="sidebar-item active" data-section="dados">
+                    📊 Consultar Dados
+                </div>
+                <div class="sidebar-item" data-section="usuarios" id="usersMenuBtn">
+                    👥 Gerenciar Usuários
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTENT -->
+        <div class="content">
+            <div id="alertContainer"></div>
+
+            <!-- DADOS SECTION -->
+            <div id="dadosSection" class="section">
+                <div class="card">
+                    <div class="card-title">Consultar Imóveis</div>
+
+                    <!-- STATS -->
+                    <div class="stats" id="statsContainer">
+                        <div class="stat-card">
+                            <div class="stat-label">Total de Registros</div>
+                            <div class="stat-value" id="totalRecords">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Registros Carregados</div>
+                            <div class="stat-value" id="loadedRecords">0</div>
+                        </div>
+                    </div>
+
+                    <!-- FILTROS -->
+                    <div class="filters">
+                        <div class="filter-group">
+                            <label class="filter-label">Propriedade (Wakbueno)</label>
+                            <input type="text" id="filterWakbueno" class="filter-input" placeholder="Ex: Wakbueno PA001">
+                        </div>
+
+                        <div class="filter-group">
+                            <label class="filter-label">Setor</label>
+                            <input type="text" id="filterSetor" class="filter-input" placeholder="Digite o setor">
+                        </div>
+
+                        <div class="filter-group">
+                            <label class="filter-label">Número de Quartos</label>
+                            <input type="number" id="filterQuartos" class="filter-input" placeholder="Ex: 3">
+                        </div>
+
+                        <div class="filter-group">
+                            <label class="filter-label">Proprietário</label>
+                            <input type="text" id="filterProprietario" class="filter-input" placeholder="Nome do proprietário">
+                        </div>
+
+                        <div class="filter-group">
+                            <label class="filter-label">Registros por Página</label>
+                            <select id="filterLimit" class="filter-select">
+                                <option value="100">100</option>
+                                <option value="500">500</option>
+                                <option value="1000">1000</option>
+                                <option value="5000">5000</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group" style="display: flex; align-items: flex-end; gap: 0.5rem;">
+                            <button class="btn btn-primary" onclick="loadDados()">🔍 Buscar</button>
+                            <button class="btn btn-secondary" onclick="clearFilters()">Limpar</button>
+                        </div>
+                    </div>
+
+                    <!-- EXPORTS -->
+                    <div style="margin-bottom: 1.5rem; display: flex; gap: 0.5rem;">
+                        <button class="btn btn-secondary" onclick="exportPDF()" id="exportPdfBtn" disabled>
+                            📄 Exportar PDF
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportCSV()" id="exportCsvBtn" disabled>
+                            📊 Exportar CSV
+                        </button>
+                    </div>
+
+                    <!-- TABELA -->
+                    <div class="table-container">
+                        <table id="dataTable">
+                            <thead>
+                                <tr id="tableHeader">
+                                    <th>Carregando...</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody">
+                                <tr><td>Nenhum dado carregado. Use os filtros acima.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- USUARIOS SECTION -->
+            <div id="usuariosSection" class="section hidden">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <div class="card-title" style="margin-bottom: 0;">Gerenciar Usuários</div>
+                        <button class="btn btn-primary" onclick="openUserModal()">+ Novo Usuário</button>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="usersTable">
+                            <thead>
+                                <tr>
+                                    <th>Usuário</th>
+                                    <th>Email</th>
+                                    <th>Função</th>
+                                    <th>Status</th>
+                                    <th>Criado em</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                                <tr><td colspan="6">Carregando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+
+    <!-- NOVO USUÁRIO MODAL -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Novo Usuário</div>
+
+            <form id="userForm" class="modal-body" onsubmit="handleUserSubmit(event)">
+                <div class="form-group">
+                    <label class="form-label">Nome de Usuário</label>
+                    <input type="text" id="newUsername" class="form-input" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="newUserEmail" class="form-input" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Senha</label>
+                    <input type="password" id="newUserPassword" class="form-input" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Função</label>
+                    <select id="newUserRole" class="form-select" required>
+                        <option value="viewer">Visualizador (apenas leitura)</option>
+                        <option value="editor">Editor (consultar e exportar)</option>
+                        <option value="admin">Administrador (acesso total)</option>
+                    </select>
+                </div>
+
+                <div id="userErrorMsg" class="alert alert-error hidden"></div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeUserModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Criar Usuário</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+<script>
+let currentData = [];
+let currentUser = null;
+
+// INICIALIZAÇÃO
+document.addEventListener('DOMContentLoaded', async () => {
+    const username = localStorage.getItem('username');
+    if (username) {
+        showDashboard();
+        await getMe();
+        loadDados();
+    }
+});
+
+// LOGIN
+async function handleLogin(event) {
+    event.preventDefault();
+
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+
+    try {
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+
+        if (!response.ok) {
+            throw new Error('Usuário ou senha inválidos');
+        }
+
+        localStorage.setItem('username', username);
+        showDashboard();
+        await getMe();
+        loadDados();
+    } catch (error) {
+        document.getElementById('loginError').textContent = error.message;
+        document.getElementById('loginError').classList.remove('hidden');
+    }
+}
+
+async function logout() {
+    await fetch('/api/logout', { method: 'POST' });
+    localStorage.removeItem('username');
+    location.reload();
+}
+
+async function getMe() {
+    try {
+        const response = await fetch('/api/me');
+        const data = await response.json();
+        currentUser = data;
+
+        document.getElementById('userDisplayName').textContent = data.username;
+        document.getElementById('userDisplayRole').textContent = {
+            'admin': 'Administrador',
+            'editor': 'Editor',
+            'viewer': 'Visualizador'
+        }[data.role] || data.role;
+
+        // Mostrar/esconder botão de usuários
+        if (data.permissions.can_manage_users) {
+            document.getElementById('usersMenuBtn').classList.remove('hidden');
+        } else {
+            document.getElementById('usersMenuBtn').classList.add('hidden');
+        }
+
+        // Ativar/desativar botões de exportação
+        if (data.permissions.can_export) {
+            document.getElementById('exportPdfBtn').disabled = false;
+            document.getElementById('exportCsvBtn').disabled = false;
+        }
+    } catch (error) {
+        console.error('Erro ao buscar dados do usuário:', error);
+    }
+}
+
+function showDashboard() {
+    document.getElementById('loginPage').classList.add('hidden');
+    document.getElementById('dashboardPage').classList.remove('hidden');
+}
+
+// DADOS
+async function loadDados() {
+    const filters = {
+        wakbueno: document.getElementById('filterWakbueno').value,
+        setor: document.getElementById('filterSetor').value,
+        quartos: document.getElementById('filterQuartos').value,
+        proprietario: document.getElementById('filterProprietario').value,
+        limit: parseInt(document.getElementById('filterLimit').value)
+    };
+
+    try {
+        showAlert('Carregando dados...', 'info');
+
+        const queryParams = new URLSearchParams();
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value) queryParams.append(key, value);
+        });
+
+        const response = await fetch(`/api/dados?${queryParams}`);
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || 'Erro ao carregar dados');
+        }
+
+        currentData = result.data;
+
+        document.getElementById('totalRecords').textContent = result.count.toLocaleString('pt-BR');
+        document.getElementById('loadedRecords').textContent = result.count.toLocaleString('pt-BR');
+
+        renderTable(currentData);
+        showAlert(`${result.count} registros carregados com sucesso`, 'success');
+    } catch (error) {
+        showAlert(error.message, 'error');
+    }
+}
+
+function renderTable(data) {
+    if (!data || data.length === 0) {
+        document.getElementById('tableBody').innerHTML = '<tr><td colspan="10">Nenhum dado encontrado.</td></tr>';
+        document.getElementById('tableHeader').innerHTML = '<tr><th>Sem dados</th></tr>';
+        return;
+    }
+
+    const columns = Object.keys(data[0]);
+    let headerHTML = columns.map(col => `<th>${col}</th>`).join('');
+    document.getElementById('tableHeader').innerHTML = `<tr>${headerHTML}</tr>`;
+
+    let bodyHTML = data.map(row => {
+        let cellsHTML = columns.map(col => {
+            let value = row[col];
+            if (value === null || value === undefined) value = '-';
+            return `<td>${String(value).substring(0, 100)}</td>`;
+        }).join('');
+        return `<tr>${cellsHTML}</tr>`;
+    }).join('');
+
+    document.getElementById('tableBody').innerHTML = bodyHTML;
+}
+
+function clearFilters() {
+    document.getElementById('filterWakbueno').value = '';
+    document.getElementById('filterSetor').value = '';
+    document.getElementById('filterQuartos').value = '';
+    document.getElementById('filterProprietario').value = '';
+    loadDados();
+}
+
+// EXPORTAÇÃO
+async function exportPDF() {
+    try {
+        const filters = {
+            wakbueno: document.getElementById('filterWakbueno').value,
+            setor: document.getElementById('filterSetor').value,
+            quartos: document.getElementById('filterQuartos').value,
+            proprietario: document.getElementById('filterProprietario').value
+        };
+
+        const response = await fetch('/export/pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                records: currentData,
+                filters: Object.fromEntries(Object.entries(filters).filter(([, v]) => v))
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Erro ao gerar PDF');
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `imoveis_${new Date().toISOString().slice(0, 10)}.pdf`;
+        a.click();
+
+        showAlert('PDF exportado com sucesso!', 'success');
+    } catch (error) {
+        showAlert(error.message, 'error');
+    }
+}
+
+async function exportCSV() {
+    try {
+        const response = await fetch('/export/csv', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ records: currentData })
+        });
+
+        if (!response.ok) {
+            throw new Error('Erro ao gerar CSV');
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `imoveis_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+
+        showAlert('CSV exportado com sucesso!', 'success');
+    } catch (error) {
+        showAlert(error.message, 'error');
+    }
+}
+
+// USUÁRIOS
+async function loadUsers() {
+    try {
+        const response = await fetch('/api/usuarios');
+        const users = await response.json();
+
+        let bodyHTML = users.map(user => `
+            <tr>
+                <td>${user.username}</td>
+                <td>${user.email}</td>
+                <td>${ {
+                    'admin': 'Administrador',
+                    'editor': 'Editor',
+                    'viewer': 'Visualizador'
+                }[user.role]}</td>
+                <td>${user.active ? '✅ Ativo' : '❌ Inativo'}</td>
+                <td>${new Date(user.created_at).toLocaleDateString('pt-BR')}</td>
+                <td>
+                    <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})">Desativar</button>
+                </td>
+            </tr>
+        `).join('');
+
+        document.getElementById('usersTableBody').innerHTML = bodyHTML;
+    } catch (error) {
+        showAlert(error.message, 'error');
+    }
+}
+
+async function handleUserSubmit(event) {
+    event.preventDefault();
+
+    const userData = {
+        username: document.getElementById('newUsername').value,
+        email: document.getElementById('newUserEmail').value,
+        password: document.getElementById('newUserPassword').value,
+        role: document.getElementById('newUserRole').value
+    };
+
+    try {
+        const response = await fetch('/api/usuarios', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(userData)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || 'Erro ao criar usuário');
+        }
+
+        showAlert(result.message, 'success');
+        closeUserModal();
+        loadUsers();
+    } catch (error) {
+        document.getElementById('userErrorMsg').textContent = error.message;
+        document.getElementById('userErrorMsg').classList.remove('hidden');
+    }
+}
+
+async function deleteUser(userId) {
+    if (!confirm('Desativar este usuário?')) return;
+
+    try {
+        const response = await fetch(`/api/usuarios/${userId}`, { method: 'DELETE' });
+
+        if (!response.ok) {
+            throw new Error('Erro ao desativar usuário');
+        }
+
+        showAlert('Usuário desativado', 'success');
+        loadUsers();
+    } catch (error) {
+        showAlert(error.message, 'error');
+    }
+}
+
+function openUserModal() {
+    document.getElementById('userModal').classList.add('active');
+    document.getElementById('userForm').reset();
+    document.getElementById('userErrorMsg').classList.add('hidden');
+}
+
+function closeUserModal() {
+    document.getElementById('userModal').classList.remove('active');
+}
+
+// NAVEGAÇÃO
+document.querySelectorAll('[data-section]').forEach(item => {
+    item.addEventListener('click', (e) => {
+        document.querySelectorAll('[data-section]').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+
+        const section = item.dataset.section;
+        document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+
+        if (section === 'dados') {
+            document.getElementById('dadosSection').classList.remove('hidden');
+        } else if (section === 'usuarios') {
+            document.getElementById('usuariosSection').classList.remove('hidden');
+            loadUsers();
+        }
+    });
+});
+
+// UTILITÁRIOS
+function showAlert(message, type = 'info') {
+    const alertContainer = document.getElementById('alertContainer');
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type}`;
+    alert.textContent = message;
+
+    alertContainer.innerHTML = '';
+    alertContainer.appendChild(alert);
+
+    if (type !== 'error') {
+        setTimeout(() => alert.remove(), 5000);
+    }
+}
+
+// FECHAR MODALS AO CLICAR FORA
+document.getElementById('userModal').addEventListener('click', (e) => {
+    if (e.target.id === 'userModal') {
+        closeUserModal();
+    }
+});
+</script>
+
+</body>
+</html>
