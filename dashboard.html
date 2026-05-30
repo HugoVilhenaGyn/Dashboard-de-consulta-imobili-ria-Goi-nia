@@ -190,6 +190,8 @@ button, input, select { font-family: inherit; }
 .chip.on-sala { background: #7C3AED; border-color: #7C3AED; color: #fff; }
 .chip.on-esc  { background: #D97706; border-color: #D97706; color: #fff; }
 .chip.on-loja { background: #059669; border-color: #059669; color: #fff; }
+.chip.on-res  { background: #DC2626; border-color: #DC2626; color: #fff; }
+.chip.on-ter  { background: #92400E; border-color: #92400E; color: #fff; }
 
 /* ─── AUTOCOMPLETE ───────────────────────────────── */
 .ac { position: relative; }
@@ -333,9 +335,13 @@ td.c-muted { color: var(--text-3); font-size: 11px; }
 .b-sala { background: #F5F3FF; color: #6D28D9; }
 .b-esc  { background: #FFF7ED; color: #C2410C; }
 .b-loja { background: var(--pos-bg); color: var(--pos); }
+.b-res  { background: #FEF2F2; color: #DC2626; }
+.b-ter  { background: #FEF3C7; color: #92400E; }
 .b-oth  { background: var(--surface-sub); color: var(--text-3); border: 1px solid var(--border); }
 [data-dark] .b-sala { background: rgba(124,58,237,.15); color: #A78BFA; }
 [data-dark] .b-esc  { background: rgba(217,119,6,.15);  color: #FCD34D; }
+[data-dark] .b-res  { background: rgba(220,38,38,.15);  color: #FCA5A5; }
+[data-dark] .b-ter  { background: rgba(146,64,14,.15);  color: #FCD34D; }
 
 /* ─── PAGINATION DARK ────────────────────────────── */
 .pager {
@@ -494,6 +500,8 @@ td.c-muted { color: var(--text-3); font-size: 11px; }
             <button class="chip"         data-ut="SALA" onclick="setUT(this)">Sala</button>
             <button class="chip"         data-ut="ESC" onclick="setUT(this)">Escaninho</button>
             <button class="chip"         data-ut="LOJA" onclick="setUT(this)">Loja</button>
+            <button class="chip"         data-ut="RES" onclick="setUT(this)">Residência</button>
+            <button class="chip"         data-ut="TER" onclick="setUT(this)">Terreno</button>
           </div>
         </div>
 
@@ -724,6 +732,8 @@ const UT = {
   SALA: 'or=(incompl.ilike.SALA*,incompl.ilike.SL*)',
   ESC:  'incompl=ilike.ESC*',
   LOJA: 'or=(incompl.ilike.LOJA*,incompl.ilike.LJ*)',
+  RES:  'or=(incompl.ilike.RES*,incompl.ilike.CASA*,incompl.ilike.RESID*)',
+  TER:  'or=(incompl.ilike.TER*,incompl.ilike.TERR*)',
 };
 
 // ─── State ────────────────────────────────────────────
@@ -958,7 +968,7 @@ function clearFilters() {
 
 function setUT(btn) {
   activeUT = btn.dataset.ut;
-  const utClass = { APT:'on', BOX:'on on-box', SALA:'on on-sala', ESC:'on on-esc', LOJA:'on on-loja', '':'on' };
+  const utClass = { APT:'on', BOX:'on on-box', SALA:'on on-sala', ESC:'on on-esc', LOJA:'on on-loja', RES:'on on-res', TER:'on on-ter', '':'on' };
   document.querySelectorAll('.chip').forEach(b => {
     b.className = b.className.replace(/ on\S*/g,'');
     if (b===btn) b.className += ' ' + (utClass[activeUT]||'on');
@@ -978,6 +988,8 @@ function unitBadge(v) {
   else if (s.startsWith('SALA')||s.startsWith('SL')) cls = 'b-sala';
   else if (s.startsWith('ESC')) cls = 'b-esc';
   else if (s.startsWith('LOJA')||s.startsWith('LJ')) cls = 'b-loja';
+  else if (s.startsWith('RES')||s.startsWith('CASA')||s.startsWith('RESID')) cls = 'b-res';
+  else if (s.startsWith('TER')) cls = 'b-ter';
   return `<span class="badge ${cls}">${v.trim()}</span>`;
 }
 
@@ -1128,7 +1140,7 @@ function updateFTags() {
   if (q) addTag(`Busca: <strong>"${q}"</strong>`, ()=>{document.getElementById('q').value='';doSearch();});
 
   if (activeUT) {
-    const lbl={APT:'Apartamento',BOX:'Box/Garagem',SALA:'Sala/Comercial',ESC:'Escaninho',LOJA:'Loja'};
+    const lbl={APT:'Apartamento',BOX:'Box/Garagem',SALA:'Sala/Comercial',ESC:'Escaninho',LOJA:'Loja',RES:'Residência',TER:'Terreno'};
     addTag(`Tipo: <strong>${lbl[activeUT]}</strong>`, ()=>{
       activeUT=''; document.querySelectorAll('.chip').forEach((b,i)=>{ b.className=b.className.replace(/ on\S*/g,'')+(i===0?' on':''); }); doSearch();
     });
