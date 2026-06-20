@@ -166,6 +166,36 @@ def logout():
     session.clear()
     return jsonify({'success': True})
 
+@app.route('/api/change-password', methods=['POST'])
+@require_login
+def change_password():
+    data = request.json
+    current_password = data.get('current_password', '')
+    new_password = data.get('new_password', '')
+
+    if not current_password or not new_password:
+        return jsonify({'error': 'Preencha todos os campos'}), 400
+
+    if len(new_password) < 6:
+        return jsonify({'error': 'Nova senha deve ter pelo menos 6 caracteres'}), 400
+
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+
+    c.execute('SELECT password_hash FROM users WHERE username = ?', (session['username'],))
+    user = c.fetchone()
+
+    if not user or hash_password(current_password) != user[0]:
+        conn.close()
+        return jsonify({'error': 'Senha atual incorreta'}), 401
+
+    c.execute('UPDATE users SET password_hash = ? WHERE username = ?',
+              (hash_password(new_password), session['username']))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'message': 'Senha alterada com sucesso'})
+
 @app.route('/api/me', methods=['GET'])
 @require_login
 def get_me():
@@ -186,29 +216,51 @@ def get_dados():
         setor = request.args.get('setor', '')
         quartos = request.args.get('quartos', '')
         proprietario = request.args.get('proprietario', '')
+        tipo = request.args.get('tipo', '')
+        edificio = request.args.get('edificio', '')
         limit = request.args.get('limit', 100, type=int)
         
         perms = get_user_permissions(session['username'])
         if perms['max_records'] > 0:
             limit = min(limit, perms['max_records'])
         
-        # Construir query
-        query = supabase.table('imoveis').select('*')
+        # Construir query - Selecionar as colunas reais do banco
+        query = supabase.table('imoveis').select('id,InscricaoCadastral,nomeBairro,uso,nomeEdificio,numeroGaragem,NomeContribuinte,ValorVenal,observacao,Endereco')
         
         if wakbueno:
-            query = query.eq('wakbueno', wakbueno)
+            query = query.eq('InscricaoCadastral', wakbueno)
         if setor:
-            query = query.ilike('setor', f'%{setor}%')
+            query = query.ilike('nomeBairro', f'%{setor}%')
         if quartos:
-            query = query.eq('numeroQuartos', int(quartos))
+            query = query.eq('numeroGaragem', int(quartos))
         if proprietario:
-            query = query.ilike('proprietario', f'%{proprietario}%')
+            query = query.ilike('NomeContribuinte', f'%{proprietario}%')
+        if tipo:
+            query = query.eq('uso', tipo)
+        if edificio:
+            query = query.ilike('nomeEdificio', f'%{edificio}%')
         
         result = query.limit(limit).execute()
         
+        # Formatar os dados de volta para os nomes amigáveis que o frontend espera
+        formatted_data = []
+        for r in result.data:
+            formatted_data.append({
+                'id': r.get('id'),
+                'wakbueno': r.get('InscricaoCadastral'),
+                'setor': r.get('nomeBairro'),
+                'tipo': r.get('uso'),
+                'edificio': r.get('nomeEdificio'),
+                'numeroQuartos': r.get('numeroGaragem'),
+                'proprietario': r.get('NomeContribuinte'),
+                'preco': r.get('ValorVenal'),
+                'descricao': r.get('observacao'),
+                'endereco': r.get('Endereco')
+            })
+        
         return jsonify({
-            'data': result.data,
-            'count': len(result.data)
+            'data': formatted_data,
+            'count': len(formatted_data)
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -216,13 +268,24 @@ def get_dados():
 @app.route('/api/valores-unicos', methods=['GET'])
 @require_login
 def get_valores_unicos():
-    """Obter valores únicos para filtros"""
+    """Obter valores únicos para filtros - Otimizado com limit para melhor performance"""
     try:
         column = request.args.get('column', 'setor')
         
-        result = supabase.table('imoveis').select(column).execute()
+        # Mapeamento para valores únicos
+        col_map = {
+            'wakbueno': 'InscricaoCadastral',
+            'setor': 'nomeBairro',
+            'tipo': 'uso',
+            'edificio': 'nomeEdificio',
+            'proprietario': 'NomeContribuinte'
+        }
+        db_column = col_map.get(column, column)
         
-        valores = list(set([r[column] for r in result.data if r.get(column)]))
+        # Limitar a 1000 registros para melhor performance
+        result = supabase.table('imoveis').select(db_column).limit(1000).execute()
+        
+        valores = list(set([r[db_column] for r in result.data if r.get(db_column)]))
         valores.sort()
         
         return jsonify({'valores': valores[:100]})
