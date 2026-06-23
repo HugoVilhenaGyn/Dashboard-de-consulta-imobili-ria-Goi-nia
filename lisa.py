@@ -16,7 +16,7 @@ def buscar_todos(palavra, h):
     todos = []
     offset = 0
     while True:
-        url = SB_URL + "/rest/v1/imoveis?select=nomeEdificio,NomeContribuinte,CPF_CNPJ,incompl,nomeBairro&nomeEdificio=ilike.*" + palavra + "*&limit=500&offset=" + str(offset)
+        url = SB_URL + "/rest/v1/imoveis?select=nomeEdificio,NomeContribuinte,CPF_CNPJ,incompl,nomeBairro&nomeEdificio=ilike." + palavra + "*&limit=500&offset=" + str(offset)
         r = req.get(url, headers=h, timeout=15)
         batch = r.json() if isinstance(r.json(), list) else []
         if not batch: break

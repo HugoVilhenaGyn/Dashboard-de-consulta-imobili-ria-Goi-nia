@@ -429,7 +429,7 @@ td.c-muted { color: var(--text-3); font-size: 11px; }
     <nav class="hdr-tabs">
       <button class="htab on" id="tab-q" onclick="showPage('query')">Consultar</button>
       <button class="htab"    id="tab-u" onclick="showPage('upload')">Enviar Arquivos</button>
-        <a href="/historico" style="color:#94a3b8;text-decoration:none;font-size:.9rem;padding:0 8px;margin-left:8px">Histórico</a>
+        <a href="/historico" class="htab" style="text-decoration:none;display:inline-flex;align-items:center">Histórico</a>
         <a href="/assistente" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;text-decoration:none;font-size:.85rem;padding:5px 14px;border-radius:8px;font-weight:600;margin-left:8px">✦ Lisa IA</a>
     </nav>
     <div class="hdr-actions" id="hdr-actions">
@@ -701,17 +701,17 @@ td.c-muted { color: var(--text-3); font-size: 11px; }
         </div>
 
         
+        <div id="file-list" style="margin-top:14px"></div>
+        <div id="upload-sum" style="display:none;margin-top:20px">
+          <h3 style="font-size:14px;font-weight:700;margin-bottom:12px">Resultado do Envio</h3>
+          <div id="sum-grid" class="sum-grid"></div>
+        </div>
         <div id="upload-hist-section" style="margin-top:32px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
             <h3 style="font-size:14px;font-weight:700;margin:0">Histórico de Envios</h3>
             <a href="/historico" style="font-size:12px;color:var(--accent);text-decoration:none">Ver tudo →</a>
           </div>
           <div id="upload-hist-list"><p style="color:var(--text-3);font-size:13px">Carregando...</p></div>
-        </div>
-        <div id="file-list" style="margin-top:14px"></div>
-        <div id="upload-sum" style="display:none;margin-top:20px">
-          <h3 style="font-size:14px;font-weight:700;margin-bottom:12px">Resultado do Envio</h3>
-          <div id="sum-grid" class="sum-grid"></div>
         </div>
       </div>
     </div>
@@ -1449,7 +1449,7 @@ async function loadUploadHist(){
   const el=document.getElementById('upload-hist-list');
   if(!el)return;
   try{
-    const r=await fetch('/api/upload_log?limit=8');
+    const r=await fetch('/api/upload_log?limit=8&order=enviado_em.desc');
     if(!r.ok){el.innerHTML='<p style="color:var(--text-3);font-size:13px">Indisponivel.</p>';return;}
     const logs=await r.json();
     if(!logs.length){el.innerHTML='<p style="color:var(--text-3);font-size:13px">Nenhum envio.</p>';return;}
