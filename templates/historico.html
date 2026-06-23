@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Histórico de Envios</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh}
+header{background:#1a1d27;border-bottom:1px solid #2d3148;padding:12px 24px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-size:1rem;font-weight:700;color:#fff}.logo span{color:#7c5cfc}
+nav a{color:#94a3b8;text-decoration:none;margin-left:16px;font-size:.9rem}
+nav a:hover{color:#fff}
+.container{max-width:1200px;margin:28px auto;padding:0 24px}
+.page-title{font-size:1.1rem;font-weight:700;margin-bottom:20px;color:#fff}
+.card{background:#1e2235;border:1px solid #2d3148;border-radius:12px;margin-bottom:24px;overflow:hidden}
+.card-header{padding:14px 20px;border-bottom:1px solid #2d3148;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.card-title{font-size:.95rem;font-weight:600;color:#fff;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex-shrink:0}
+.chip{padding:3px 10px;border-radius:12px;font-size:.75rem;font-weight:700}
+.chip-reg{background:#1e3a5f;color:#60a5fa}
+.chip-cond{background:#064e3b;color:#34d399}
+.chip-casa{background:#451a03;color:#f59e0b}
+.chip-date{color:#64748b;font-size:.78rem}
+.cond-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.cond-table th{background:#161926;padding:8px 14px;text-align:left;color:#64748b;font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.5px}
+.cond-table td{padding:8px 14px;border-bottom:1px solid #1a1d27}
+.cond-table tr:last-child td{border-bottom:none}
+.cond-table tr:hover td{background:#232740}
+.num{text-align:center}
+.ap{color:#60a5fa;font-weight:600}
+.box{color:#f59e0b;font-weight:600}
+.sala{color:#34d399;font-weight:600}
+.total{font-weight:700}
+.unifamiliar{color:#64748b;font-style:italic}
+.empty{text-align:center;padding:60px;color:#4a5568}
+.btn-back{background:#1e2235;border:1px solid #2d3148;color:#a5b4fc;padding:7px 14px;border-radius:8px;font-size:.82rem;text-decoration:none}
+.resumo{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.res-card{background:#1e2235;border:1px solid #2d3148;border-radius:10px;padding:12px 20px;text-align:center;min-width:120px}
+.res-n{font-size:1.4rem;font-weight:700}
+.res-l{font-size:.75rem;color:#64748b;margin-top:2px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">Cadastro <span>Imobiliário</span></div>
+  <nav>
+    <a href="/">Consultar</a>
+    <a href="/">Enviar Arquivos</a>
+    <a href="/historico" style="color:#7c5cfc;font-weight:600">Histórico</a>
+    <a href="/assistente">Lisa IA</a>
+  </nav>
+</header>
+<div class="container">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <div class="page-title">Histórico de Envios</div>
+    <a href="/" class="btn-back">← Voltar</a>
+  </div>
+  <div id="resumo" class="resumo"></div>
+  <div id="conteudo"><div class="empty">Carregando...</div></div>
+</div>
+<script>
+async function carregar(){
+  const r = await fetch('/api/upload_log');
+  const dados = await r.json();
+  const el = document.getElementById('conteudo');
+  const res = document.getElementById('resumo');
+  if(!dados.length){ el.innerHTML='<div class="empty">Nenhum envio registrado ainda.</div>'; return; }
+
+  const totalReg = dados.reduce((s,d)=>s+(d.registros||0),0);
+  res.innerHTML=`
+    <div class="res-card"><div class="res-n" style="color:#60a5fa">${dados.length}</div><div class="res-l">Arquivos enviados</div></div>
+    <div class="res-card"><div class="res-n" style="color:#34d399">${totalReg.toLocaleString('pt-BR')}</div><div class="res-l">Registros totais</div></div>`;
+
+  el.innerHTML = dados.map(d=>{
+    const conds = d.condominios||[];
+    const nConds = conds.filter(c=>c.nome&&c.nome.trim()&&c.nome.trim()!=='(sem nome)').length;
+    const casas = conds.filter(c=>!c.nome||c.nome.trim()==='(sem nome)').reduce((s,c)=>s+(c.total||0),0);
+
+    const rows = conds.length ? conds.sort((a,b)=>(b.total||0)-(a.total||0)).map(c=>{
+      const isCasa = !c.nome||c.nome.trim()==='(sem nome)';
+      const nomeCell = isCasa
+        ? `<span class="unifamiliar">${c.sala>0&&c.ap===0&&c.box===0?'Salas Comerciais':'Casa / Residencial Unifamiliar'}</span>`
+        : c.nome;
+      return `<tr>
+        <td>${nomeCell}</td>
+        <td style="color:#94a3b8">${c.bairro||''}</td>
+        <td class="num total">${c.total||0}</td>
+        <td class="num ap">${c.ap||0}</td>
+        <td class="num box">${c.box||0}</td>
+        <td class="num sala">${c.sala||0}</td>
+      </tr>`;
+    }).join('')
+    : '<tr><td colspan="6" style="text-align:center;color:#64748b;padding:16px">Sem detalhes</td></tr>';
+
+    return `<div class="card">
+      <div class="card-header">
+        <div class="card-title" title="${d.nome_arquivo}">${d.nome_arquivo}</div>
+        <div class="card-meta">
+          <span class="chip chip-reg">${(d.registros||0).toLocaleString('pt-BR')} registros</span>
+          <span class="chip chip-cond">${nConds} condomínios</span>
+          ${casas>0?`<span class="chip chip-casa">${casas} unifamiliar</span>`:''}
+          <span class="chip-date">${new Date(d.enviado_em).toLocaleString('pt-BR')}</span>
+        </div>
+      </div>
+      <table class="cond-table">
+        <thead><tr>
+          <th>Edifício</th><th>Bairro</th>
+          <th class="num">Total</th>
+          <th class="num" style="color:#60a5fa">AP</th>
+          <th class="num" style="color:#f59e0b">Box</th>
+          <th class="num" style="color:#34d399">Sala</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+}
+carregar();
+</script>
+</body>
+</html>

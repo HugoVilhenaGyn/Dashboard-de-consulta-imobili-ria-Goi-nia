@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lisa – Lobo Imóveis</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',sans-serif;background:#0f1117;color:#e2e8f0;height:100vh;display:flex;flex-direction:column}
+  header{background:#1a1d27;border-bottom:1px solid #2d3148;padding:12px 20px;display:flex;align-items:center;justify-content:space-between}
+  .logo{display:flex;align-items:center;gap:10px}
+  .logo-dot{width:10px;height:10px;background:#7c5cfc;border-radius:50%;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .logo h1{font-size:1.1rem;font-weight:600;color:#fff}
+  .logo span{font-size:.75rem;color:#7c5cfc;font-weight:400}
+  .header-btns{display:flex;gap:8px}
+  #chat{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px}
+  .msg{max-width:78%;padding:12px 16px;border-radius:12px;line-height:1.55;font-size:.9rem;animation:fadeIn .2s ease}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .msg.user{align-self:flex-end;background:#7c5cfc;color:#fff;border-bottom-right-radius:4px}
+  .msg.lisa{align-self:flex-start;background:#1e2235;border:1px solid #2d3148;border-bottom-left-radius:4px;white-space:pre-wrap}
+  .msg.lisa table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.85rem}
+  .msg.lisa th{background:#2d3148;padding:6px 10px;text-align:left;font-weight:600;color:#a5b4fc}
+  .msg.lisa td{padding:5px 10px;border-bottom:1px solid #2d3148}
+  .msg.lisa tr:last-child td{border-bottom:none}
+  .typing{align-self:flex-start;background:#1e2235;border:1px solid #2d3148;padding:12px 18px;border-radius:12px;border-bottom-left-radius:4px}
+  .typing span{display:inline-block;width:7px;height:7px;background:#7c5cfc;border-radius:50%;margin:0 2px;animation:bounce .9s infinite}
+  .typing span:nth-child(2){animation-delay:.15s}
+  .typing span:nth-child(3){animation-delay:.3s}
+  @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+  .bar{background:#1a1d27;border-top:1px solid #2d3148;padding:12px 16px;display:flex;gap:8px;align-items:center}
+  #inp{flex:1;background:#0f1117;border:1px solid #2d3148;border-radius:8px;padding:10px 14px;color:#e2e8f0;font-size:.9rem;outline:none;resize:none;max-height:100px}
+  #inp:focus{border-color:#7c5cfc}
+  button{border:none;border-radius:8px;padding:10px 16px;cursor:pointer;font-size:.85rem;font-weight:600;transition:opacity .15s}
+  button:hover{opacity:.85}
+  #btn-send{background:#7c5cfc;color:#fff}
+  #btn-nova{background:#1e2235;color:#a5b4fc;border:1px solid #2d3148}
+  .export-bar{padding:8px 20px;background:#1a1d27;border-top:1px solid #2d3148;display:none;gap:8px;align-items:center;flex-wrap:wrap}
+  .export-bar.visible{display:flex}
+  .export-bar span{font-size:.8rem;color:#94a3b8}
+  .btn-exp{background:#0f4c2e;color:#4ade80;border:1px solid #166534;padding:7px 14px;font-size:.8rem}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    <div>
+      <h1>Lisa</h1>
+      <span>Assistente Lobo Imóveis</span>
+    </div>
+  </div>
+  <div class="header-btns">
+    <button id="btn-nova" onclick="novaConsulta()">↺ Nova consulta</button>
+  </div>
+</header>
+<div id="chat">
+  <div class="msg lisa">Olá! Sou a Lisa, assistente de dados da Lobo Imóveis Goiânia. Me informe o nome de um edifício ou condomínio para começar.</div>
+</div>
+<div class="export-bar" id="export-bar">
+  <span>Exportar dados do edifício:</span>
+  <button class="btn-exp" onclick="exportar('todos')">📥 Todos</button>
+  <button class="btn-exp" onclick="exportar('apts')">Apartamentos</button>
+  <button class="btn-exp" onclick="exportar('salas')">Salas/Lojas</button>
+  <button class="btn-exp" onclick="exportar('boxes')">Boxes/Garagens</button>
+</div>
+<div class="bar">
+  <textarea id="inp" rows="1" placeholder="Pergunte sobre um edifício..."></textarea>
+  <button id="btn-send" onclick="enviar()">Enviar</button>
+</div>
+<script>
+let edificioAtual = "";
+function nl2table(txt) {
+  const lines = txt.split('\n');
+  let out = '', inTable = false;
+  for (let l of lines) {
+    const trimmed = l.trim();
+    if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+      const cells = trimmed.slice(1,-1).split('|').map(c=>c.trim());
+      if (!inTable) { out += '<table>'; inTable = true; }
+      const isDiv = cells.every(c=>c.match(/^[-:| ]+$/));
+      if (isDiv) continue;
+      const tag = !out.includes('<th>') ? 'th' : 'td';
+      out += '<tr>' + cells.map(c=>`<${tag}>${c}</${tag}>`).join('') + '</tr>';
+    } else {
+      if (inTable) { out += '</table>'; inTable = false; }
+      out += (trimmed ? trimmed : '') + '\n';
+    }
+  }
+  if (inTable) out += '</table>';
+  return out;
+}
+async function enviar() {
+  const inp = document.getElementById('inp');
+  const pergunta = inp.value.trim();
+  if (!pergunta) return;
+  inp.value = '';
+  inp.style.height = 'auto';
+  addMsg(pergunta, 'user');
+  const typing = addTyping();
+  try {
+    const r = await fetch('/api/assistente', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pergunta})});
+    const d = await r.json();
+    typing.remove();
+    addMsg(nl2table(d.resposta || d.error || 'Erro'), 'lisa');
+    if (d.edificio) { edificioAtual = d.edificio; document.getElementById('export-bar').classList.add('visible'); }
+  } catch(e) { typing.remove(); addMsg('Erro: ' + e, 'lisa'); }
+}
+function addMsg(html, tipo) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + tipo;
+  div.innerHTML = html;
+  document.getElementById('chat').appendChild(div);
+  div.scrollIntoView({behavior:'smooth'});
+  return div;
+}
+function addTyping() {
+  const div = document.createElement('div');
+  div.className = 'typing';
+  div.innerHTML = '<span></span><span></span><span></span>';
+  document.getElementById('chat').appendChild(div);
+  div.scrollIntoView({behavior:'smooth'});
+  return div;
+}
+async function novaConsulta() {
+  await fetch('/api/assistente/nova', {method:'POST'});
+  edificioAtual = '';
+  document.getElementById('chat').innerHTML = '<div class="msg lisa">Consulta reiniciada. Me informe o nome de um edifício ou condomínio.</div>';
+  document.getElementById('export-bar').classList.remove('visible');
+}
+function exportar(filtro) {
+  if (!edificioAtual) return alert('Nenhum edifício consultado ainda.');
+  window.location = '/api/assistente/exportar?edificio=' + encodeURIComponent(edificioAtual) + '&filtro=' + filtro;
+}
+document.getElementById('inp').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+});
+document.getElementById('inp').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(); }
+});
+</script>
+</body>
+</html>

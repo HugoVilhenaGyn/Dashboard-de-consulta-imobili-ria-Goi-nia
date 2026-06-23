@@ -429,6 +429,8 @@ td.c-muted { color: var(--text-3); font-size: 11px; }
     <nav class="hdr-tabs">
       <button class="htab on" id="tab-q" onclick="showPage('query')">Consultar</button>
       <button class="htab"    id="tab-u" onclick="showPage('upload')">Enviar Arquivos</button>
+        <a href="/historico" style="color:#94a3b8;text-decoration:none;font-size:.9rem;padding:0 8px;margin-left:8px">Histórico</a>
+        <a href="/assistente" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;text-decoration:none;font-size:.85rem;padding:5px 14px;border-radius:8px;font-weight:600;margin-left:8px">✦ Lisa IA</a>
     </nav>
     <div class="hdr-actions" id="hdr-actions">
       <button class="hdr-icon-btn" id="dark-btn" onclick="toggleDark()">
@@ -651,7 +653,7 @@ td.c-muted { color: var(--text-3); font-size: 11px; }
           <thead>
             <tr>
               <th class="th-cb"><input type="checkbox" id="cb-all" class="row-cb" onchange="toggleAll(this)"></th>
-              <th style="width:190px">Edifício / Condomínio</th>
+              <th style="width:190px;cursor:pointer;user-select:none" id="th-edificio" onclick="sortByEdificio()">Edifício / Condomínio ↕</th>
               <th style="width:110px">Unidade</th>
               <th style="width:140px">Bairro / Setor</th>
               <th style="width:190px">Proprietário</th>
@@ -698,6 +700,14 @@ td.c-muted { color: var(--text-3); font-size: 11px; }
           <input id="file-in" type="file" accept=".xlsx,.xls" multiple style="display:none">
         </div>
 
+        
+        <div id="upload-hist-section" style="margin-top:32px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <h3 style="font-size:14px;font-weight:700;margin:0">Histórico de Envios</h3>
+            <a href="/historico" style="font-size:12px;color:var(--accent);text-decoration:none">Ver tudo →</a>
+          </div>
+          <div id="upload-hist-list"><p style="color:var(--text-3);font-size:13px">Carregando...</p></div>
+        </div>
         <div id="file-list" style="margin-top:14px"></div>
         <div id="upload-sum" style="display:none;margin-top:20px">
           <h3 style="font-size:14px;font-weight:700;margin-bottom:12px">Resultado do Envio</h3>
@@ -1071,7 +1081,7 @@ function renderTable(rawRows) {
     const isSel = selRows.has(k);
     return `<tr class="${isSel?'sel':''}" id="tr-${i}">
       <td class="td-cb"><input type="checkbox" class="row-cb" data-i="${i}" ${isSel?'checked':''} onchange="toggleRow(this,${i})"></td>
-      <td class="c-primary" title="${safe((row.nomeEdificio||'').trim())}">${safe((row.nomeEdificio||'').trim())||'<span style="color:var(--text-3)">—</span>'}</td>
+      <td class="c-primary" title="${safe((row.nomeEdificio||'').trim())}">${safe((row.nomeEdificio||'').trim())?'<span style="cursor:pointer;color:var(--accent)" onclick="filterByEdificio(this.textContent)">'+safe((row.nomeEdificio||'').trim())+'</span>':'<span style="color:var(--text-3)">—</span>'}</td>
       <td>${unitBadge(row.incompl)||'<span style="color:var(--text-3)">—</span>'}</td>
       <td title="${safe((row.nomeBairro||'').trim())}">${safe((row.nomeBairro||'').trim())||'<span style="color:var(--text-3)">—</span>'}</td>
       <td class="c-primary" title="${safe(row.NomeContribuinte||'')}">${safe(row.NomeContribuinte||'')||'<span style="color:var(--text-3)">—</span>'}</td>
@@ -1316,6 +1326,13 @@ function td(){return new Date().toISOString().slice(0,10);}
 // ═══════════════════════════════════════════════════════
 //  PAGES
 // ═══════════════════════════════════════════════════════
+
+function filterByEdificio(nome){
+  const inp=document.getElementById('fi-nomeEdificio');
+  if(inp){inp.value=nome;inp.dispatchEvent(new Event('input'));}
+  curPage=0;
+  doSearch();
+}
 function showPage(pg) {
   document.getElementById('page-query').style.display  = pg==='query' ?'flex':'none';
   document.getElementById('page-upload').style.display = pg==='upload'?'flex':'none';
@@ -1323,6 +1340,7 @@ function showPage(pg) {
   document.getElementById('stats-row').style.display   = pg==='query' ?'grid':'none';
   document.getElementById('tab-q').classList.toggle('on',pg==='query');
   document.getElementById('tab-u').classList.toggle('on',pg==='upload');
+  if(pg==='upload') loadUploadHist();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1333,6 +1351,9 @@ function onDL(){document.getElementById('drop').classList.remove('drag');}
 function onDD(e){e.preventDefault();onDL();const f=[...e.dataTransfer.files].filter(f=>/\.xlsx?$/i.test(f.name));if(f.length)startUp(f);}
 
 function startUp(files) {
+  const hist=JSON.parse(localStorage.getItem('upload_hist')||'[]');
+  const dups=files.filter(f=>hist.some(h=>h.name===f.name));
+  if(dups.length&&!confirm('⚠️ Arquivo(s) já enviado(s) anteriormente:\n'+dups.map(f=>f.name).join('\n')+'\n\nDeseja enviar mesmo assim?'))return;
   upLog.length=0;
   document.getElementById('upload-sum').style.display='none';
   document.getElementById('file-list').innerHTML='';
@@ -1423,6 +1444,35 @@ async function sendBatch(records){
   }catch(e){return{ok:false,err:e.message};}
 }
 
+
+async function loadUploadHist(){
+  const el=document.getElementById('upload-hist-list');
+  if(!el)return;
+  try{
+    const r=await fetch('/api/upload_log?limit=8');
+    if(!r.ok){el.innerHTML='<p style="color:var(--text-3);font-size:13px">Indisponivel.</p>';return;}
+    const logs=await r.json();
+    if(!logs.length){el.innerHTML='<p style="color:var(--text-3);font-size:13px">Nenhum envio.</p>';return;}
+    el.innerHTML=logs.map(lg=>{
+      const dt=new Date(lg.enviado_em);
+      const dtStr=dt.toLocaleDateString('pt-BR')+' '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      const conds=(lg.condominios||[]);
+      const nC=conds.filter(c=>c.nome&&c.nome.trim()&&c.nome.trim()!=='(sem nome)').length;
+      const nU=conds.filter(c=>!c.nome||!c.nome.trim()||c.nome.trim()==='(sem nome)').length;
+      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--card-bg);border:1px solid var(--border);border-radius:8px;margin-bottom:8px">'
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+lg.nome_arquivo+'</div>'
+        +'<div style="font-size:11px;color:var(--text-3);margin-top:2px">'+dtStr+'</div>'
+        +'</div>'
+        +'<div style="display:flex;gap:8px;flex-shrink:0">'
+        +'<span style="font-size:11px;background:rgba(99,102,241,.12);color:var(--accent);padding:2px 8px;border-radius:12px">'+(lg.registros||0).toLocaleString('pt-BR')+' reg</span>'
+        +(nC?'<span style="font-size:11px;background:rgba(34,197,94,.1);color:#22c55e;padding:2px 8px;border-radius:12px">'+nC+' cond</span>':'')
+        +(nU?'<span style="font-size:11px;background:rgba(251,146,60,.1);color:#fb923c;padding:2px 8px;border-radius:12px">'+nU+' unifam</span>':'')
+        +'</div></div>';
+    }).join('');
+  }catch(e){el.innerHTML='<p style="color:var(--text-3);font-size:13px">Erro.</p>';}
+}
+
 function showUpSum(){
   const ok=upLog.reduce((s,r)=>s+r.ok,0);
   const fok=upLog.filter(r=>!r.errs.length&&!r.empty).length;
@@ -1433,6 +1483,7 @@ function showUpSum(){
     <div class="sum-card"><div class="sum-n" style="color:${ferr>0?'var(--neg)':'var(--text-3)'}">${ferr}</div><div class="sum-l">Com erro</div></div>
     ${upLog.filter(r=>r.errs.length>0).map(r=>`<div style="grid-column:1/-1;background:var(--neg-bg);border:1px solid var(--neg);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--neg)"><strong>${r.name}</strong>: ${r.errs[0].slice(0,150)}</div>`).join('')}`;
   document.getElementById('upload-sum').style.display='block';
+  loadUploadHist();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1443,6 +1494,17 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('file-in')?.addEventListener('change',function(){if(this.files.length){startUp([...this.files]);this.value='';}});
   checkAuth();
 });
+
+
+var _sortEdDir=1;
+function sortByEdificio(){
+  const th=document.getElementById('th-edificio');
+  if(!th)return;
+  _sortEdDir*=-1;
+  th.textContent='Edifício / Condomínio '+(_sortEdDir===1?'↑':'↓');
+  _curRows=[..._curRows].sort((a,b)=>(a.nomeEdificio||'').trim().localeCompare((b.nomeEdificio||'').trim(),'pt-BR')*_sortEdDir);
+  renderTable(_curRows);
+}
 </script>
 </body>
 </html>

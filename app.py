@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = secrets.token_hex(32)
+app.secret_key = "brokerimobai2025xK9mNpQr"
 CORS(app)
 
 # Supabase config
@@ -484,6 +484,11 @@ def export_csv():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+from lisa import register_lisa
+register_lisa(app)
+from lisa import register_upload_log
+register_upload_log(app)
 if __name__ == '__main__':
     init_db()
     app.run(debug=False, host='0.0.0.0', port=5000)
