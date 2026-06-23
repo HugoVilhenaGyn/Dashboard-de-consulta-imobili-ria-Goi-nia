@@ -1425,7 +1425,7 @@ function cleanRow(row,fileName){
       const bd=/^(\d{2})\/(\d{2})\/(\d{4})(?:[T\s](\d{2}):(\d{2})(?::(\d{2}))?)?$/.exec(s);
       if(bd){const iso=new Date(`${bd[3]}-${bd[2]}-${bd[1]}T${bd[4]||'00'}:${bd[5]||'00'}:${bd[6]||'00'}`);out[k]=isNaN(iso.getTime())?null:iso.toISOString();}
       // Colunas numéricas com valor textual (ex: "L20") → tentar parsear; se falhar, null
-      else if(colTypes[k]==='int'||colTypes[k]==='float'){const n=Number(s);out[k]=isNaN(n)?null:(colTypes[k]==='int'?Math.trunc(n):n);}
+      else if(colTypes[k]==='int'||colTypes[k]==='float'){const s2=typeof s==='string'?s.replace(/\./g,'').replace(',','.'):s;const n=Number(s2);out[k]=isNaN(n)?null:(colTypes[k]==='int'?Math.trunc(n):n);}
       else{out[k]=s;}
     }
     else{out[k]=v;}
