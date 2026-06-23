@@ -1483,6 +1483,12 @@ function showUpSum(){
     <div class="sum-card"><div class="sum-n" style="color:${ferr>0?'var(--neg)':'var(--text-3)'}">${ferr}</div><div class="sum-l">Com erro</div></div>
     ${upLog.filter(r=>r.errs.length>0).map(r=>`<div style="grid-column:1/-1;background:var(--neg-bg);border:1px solid var(--neg);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--neg)"><strong>${r.name}</strong>: ${r.errs[0].slice(0,150)}</div>`).join('')}`;
   document.getElementById('upload-sum').style.display='block';
+  // Salvar log no banco
+  const ok2=upLog.reduce((s,r)=>s+r.ok,0);
+  const conds=[...new Set(upLog.flatMap(r=>r.conds||[]))];
+  fetch('/api/upload_log',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({nome_arquivo:upLog.map(r=>r.name).join(', '),registros:ok2,condominios:conds,usuario:'sistema'})
+  });
   loadUploadHist();
 }
 
