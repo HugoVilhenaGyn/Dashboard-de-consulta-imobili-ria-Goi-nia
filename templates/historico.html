@@ -28,9 +28,9 @@ nav a:hover{color:#fff}
 .cond-table tr:last-child td{border-bottom:none}
 .cond-table tr:hover td{background:#232740}
 .num{text-align:center}
-.ap{color:#60a5fa;font-weight:600}
-.box{color:#f59e0b;font-weight:600}
-.sala{color:#34d399;font-weight:600}
+
+
+
 .total{font-weight:700}
 .unifamiliar{color:#64748b;font-style:italic}
 .empty{text-align:center;padding:60px;color:#4a5568}
@@ -48,7 +48,7 @@ nav a:hover{color:#fff}
     <a href="/">Consultar</a>
     <a href="/">Enviar Arquivos</a>
     <a href="/historico" style="color:#7c5cfc;font-weight:600">Histórico</a>
-    <a href="/assistente">Lisa IA</a>
+    <a href="/assistente" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;text-decoration:none;font-size:.85rem;padding:5px 14px;border-radius:8px;font-weight:600;margin-left:8px">✦ Lisa IA</a>
   </nav>
 </header>
 <div class="container">
@@ -80,15 +80,15 @@ async function carregar(){
     const rows = conds.length ? conds.sort((a,b)=>(b.total||0)-(a.total||0)).map(c=>{
       const isCasa = !c.nome||c.nome.trim()==='(sem nome)';
       const nomeCell = isCasa
-        ? `<span class="unifamiliar">${c.sala>0&&c.ap===0&&c.box===0?'Salas Comerciais':'Casa / Residencial Unifamiliar'}</span>`
+        ? `<span class="unifamiliar">Casa / Residencial Unifamiliar</span>`
         : c.nome;
       return `<tr>
         <td>${nomeCell}</td>
         <td style="color:#94a3b8">${c.bairro||''}</td>
         <td class="num total">${c.total||0}</td>
-        <td class="num ap">${c.ap||0}</td>
-        <td class="num box">${c.box||0}</td>
-        <td class="num sala">${c.sala||0}</td>
+        
+        
+        
       </tr>`;
     }).join('')
     : '<tr><td colspan="6" style="text-align:center;color:#64748b;padding:16px">Sem detalhes</td></tr>';
@@ -105,11 +105,11 @@ async function carregar(){
       </div>
       <table class="cond-table">
         <thead><tr>
-          <th>Edifício</th><th>Bairro</th>
-          <th class="num">Total</th>
-          <th class="num" style="color:#60a5fa">AP</th>
-          <th class="num" style="color:#f59e0b">Box</th>
-          <th class="num" style="color:#34d399">Sala</th>
+          <th style="text-align:left">Edifício</th><th style="text-align:left">Bairro</th>
+          <th class="num" style="text-align:center">Total</th>
+          
+          
+          
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>

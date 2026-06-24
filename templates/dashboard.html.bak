@@ -1422,23 +1422,7 @@ async function procFile(file,elId){
     }
     if(!errs.length){setPB(elId,100,`${sent} enviados`,'','ok');}
     else{setPB(elId,100,`${sent} ok / ${errs.length} erro(s)`,errs[0].slice(0,90),'err');}
-    // Sumarizar por edifício/bairro/tipo
-    const edMap={};
-    for(const row of cleaned){
-      const ed=(row.nomeEdificio||'').trim()||'(sem nome)';
-      const bairro=(row.nomeBairro||'').trim()||'';
-      if(!edMap[ed])edMap[ed]={nome:ed,bairro,total:0,ap:0,box:0,sala:0,res:0,ter:0,outro:0};
-      edMap[ed].total++;
-      const tp=(row.tipoUnidade||row.descricaoUso||'').toString().toUpperCase();
-      if(tp.includes('APART')||tp==='APT')edMap[ed].ap++;
-      else if(tp.includes('BOX')||tp.includes('GARAG'))edMap[ed].box++;
-      else if(tp.includes('SALA')||tp.includes('COMERC')||tp.includes('LOJA'))edMap[ed].sala++;
-      else if(tp.includes('RESID'))edMap[ed].res++;
-      else if(tp.includes('TERR'))edMap[ed].ter++;
-      else edMap[ed].outro++;
-    }
-    const fileConds=Object.values(edMap);
-    upLog.push({name:file.name,ok:sent,errs,conds:fileConds});
+    upLog.push({name:file.name,ok:sent,errs});
   }catch(e){setPB(elId,100,'Falhou',e.message.slice(0,100),'err');upLog.push({name:file.name,ok:0,errs:[e.message]});}
 }
 
@@ -1456,17 +1440,12 @@ function cleanRow(row,fileName){
       const bd=/^(\d{2})\/(\d{2})\/(\d{4})(?:[T\s](\d{2}):(\d{2})(?::(\d{2}))?)?$/.exec(s);
       if(bd){const iso=new Date(`${bd[3]}-${bd[2]}-${bd[1]}T${bd[4]||'00'}:${bd[5]||'00'}:${bd[6]||'00'}`);out[k]=isNaN(iso.getTime())?null:iso.toISOString();}
       // Colunas numéricas com valor textual (ex: "L20") → tentar parsear; se falhar, null
-      else if(colTypes[k]==='int'||colTypes[k]==='float'||colTypes[k]==='numeric'){
+      else if(colTypes[k]==='int'||colTypes[k]==='float'){
         const s2=s.replace(/\./g,'').replace(',','.');
         const n=Number(s2);
         out[k]=isNaN(n)?null:(colTypes[k]==='int'?Math.trunc(n):n);
       }
-      else{
-        const nb=s.replace(/\./g,'').replace(',','.');
-        const nn=Number(nb);
-        if(nb!==''&&!isNaN(nn)&&/^-?[\d.,]+$/.test(s)){out[k]=Number.isInteger(nn)?Math.trunc(nn):nn;}
-        else{out[k]=s;}
-      }
+      else{out[k]=s;}
     }
     else{out[k]=v;}
   }
