@@ -33,3 +33,7 @@ log_upload.txt
 # OS
 .DS_Store
 Thumbs.db
+backups/
+*.tar.gz
+*.bak
+static/tmp_export/
