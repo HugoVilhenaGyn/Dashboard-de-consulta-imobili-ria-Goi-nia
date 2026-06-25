@@ -25,9 +25,9 @@ def buscar_todos(palavra, h):
         offset += 500
     return todos
 
-def is_apt(v): return s(v).upper().startswith("AP")
-def is_sala(v): return s(v).upper().startswith("SALA") or s(v).upper().startswith("LOJA") or s(v).upper().startswith("COMER")
-def is_box(v): return s(v).upper().startswith("BOX") or s(v).upper().startswith("SS") or s(v).upper().startswith("ESC") or s(v).upper().startswith("DEP") or s(v).upper().startswith("GAR")
+def is_apt(v): return s(v).upper().startswith("AP") or s(v).upper().startswith("APART") or s(v).upper().startswith("PENTHOUSE")
+def is_sala(v): return s(v).upper().startswith("SALA") or s(v).upper().startswith("SL") or s(v).upper().startswith("LOJA") or s(v).upper().startswith("LJ") or s(v).upper().startswith("COMER")
+def is_box(v): return s(v).upper().startswith("BOX") or s(v).upper().startswith("BX") or s(v).upper().startswith("SS") or s(v).upper().startswith("DEP") or s(v).upper().startswith("GAR")
 
 def processar(dados_ed):
     apts = [i for i in dados_ed if is_apt(i.get("incompl"))]
