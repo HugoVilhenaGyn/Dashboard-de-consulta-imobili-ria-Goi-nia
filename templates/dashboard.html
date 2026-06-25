@@ -654,13 +654,13 @@ td.c-muted { color: var(--text-3); font-size: 11px; }
             <tr>
               <th class="th-cb"><input type="checkbox" id="cb-all" class="row-cb" onchange="toggleAll(this)"></th>
               <th style="width:190px;cursor:pointer;user-select:none" id="th-edificio" onclick="sortByEdificio()">Edifício / Condomínio ↕</th>
-              <th style="width:110px">Unidade</th>
-              <th style="width:140px">Bairro / Setor</th>
-              <th style="width:190px">Proprietário</th>
-              <th style="width:125px">CPF / CNPJ</th>
-              <th class="r" style="width:75px">Área m²</th>
-              <th class="r" style="width:115px">Valor Venal</th>
-              <th style="width:135px">Inscrição</th>
+              <th id="th-unidade" style="width:110px;cursor:pointer;user-select:none" onclick="sortByCol('unidade','incompl','text')">Unidade ↕</th>
+              <th id="th-bairro" style="width:140px;cursor:pointer;user-select:none" onclick="sortByCol('bairro','nomeBairro','text')">Bairro / Setor ↕</th>
+              <th id="th-prop" style="width:190px;cursor:pointer;user-select:none" onclick="sortByCol('prop','NomeContribuinte','text')">Proprietário ↕</th>
+              <th id="th-cpf" style="width:125px;cursor:pointer;user-select:none" onclick="sortByCol('cpf','CPF_CNPJ','text')">CPF / CNPJ ↕</th>
+              <th id="th-area" class="r" style="width:75px;cursor:pointer;user-select:none" onclick="sortByCol('area','areaTerreno_mapa','num')">Área m² ↕</th>
+              <th id="th-venal" class="r" style="width:115px;cursor:pointer;user-select:none" onclick="sortByCol('venal','valorVenal_mapa','num')">Valor Venal ↕</th>
+              <th id="th-insc" style="width:135px;cursor:pointer;user-select:none" onclick="sortByCol('insc','numeroInscricao','text')">Inscrição ↕</th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
@@ -736,12 +736,12 @@ const META = new Set(['_arquivo_origem','_pasta_origem','_dt_importacao']);
 const QCOLS = ['nomeEdificio','NomeContribuinte','nomeBairro','Endereco','CPF_CNPJ','nomeLogradouro','incompl'];
 
 const UT = {
-  APT:  ['incompl.ilike.APT*','incompl.ilike.APTO*','incompl.ilike.AP*'],
-  BOX:  ['incompl.ilike.BOX*'],
-  SALA: ['incompl.ilike.SALA*','incompl.ilike.SL*'],
-  ESC:  ['incompl.ilike.ESC*'],
-  LOJA: ['incompl.ilike.LOJA*','incompl.ilike.LJ*'],
-  RES:  ['incompl.ilike.RES*','incompl.ilike.CASA*','incompl.ilike.RESID*'],
+  APT:  ['incompl.ilike.AP*'],
+  BOX:  ['incompl.ilike.BOX*','incompl.ilike.BX*','incompl.ilike.BOXV*'],
+  SALA: ['incompl.ilike.SALA*','incompl.ilike.SL*','incompl.ilike.SALAS*'],
+  ESC:  ['incompl.ilike.ESC*','incompl.ilike.ESCA*'],
+  LOJA: ['incompl.ilike.LOJA*','incompl.ilike.LJ*','incompl.ilike.LJS*'],
+  RES:  ['incompl.ilike.RES*','incompl.ilike.CASA*','incompl.ilike.RESID*','incompl.ilike.RESIDENCIA*'],
   TER:  ['incompl.ilike.TER*','incompl.ilike.TERR*'],
 };
 
@@ -900,10 +900,10 @@ function buildQuery(limit, offset) {
   const parts = [`limit=${limit}`, `offset=${offset}`];
 
   const q = document.getElementById('q').value.trim();
-  if (q) {
+  const qOr = q ? (() => {
     const cols = QCOLS.filter(c => validCols.has(c) && colTypes[c]==='text');
-    if (cols.length) parts.push(`or=(${cols.map(c=>`${c}.ilike.*${enc(q)}*`).join(',')})`);
-  }
+    return cols.length ? `or=(${cols.map(c=>`${c}.ilike.*${enc(q)}*`).join(',')})` : '';
+  })() : '';
 
   document.querySelectorAll('.dyn').forEach(el => {
     const v = el.value.trim(); if (!v) return;
@@ -917,8 +917,20 @@ function buildQuery(limit, offset) {
   if (!isNaN(aMax) && aMax > 0) parts.push(`areaEdificio=lte.${Math.round(aMax*100)}`);
 
   if (activeUT.size > 0) {
-    const conds = [...activeUT].flatMap(k => UT[k] || []);
-    if (conds.length) parts.push(`or=(${conds.join(',')})`);
+    const utConds = [...activeUT].flatMap(k => UT[k] || []);
+    if (utConds.length) {
+      if (qOr) {
+        const utOrStr = `or(${utConds.join(',')})`;
+        const qOrStr  = `or(${QCOLS.filter(c=>validCols.has(c)&&colTypes[c]==='text').map(c=>`${c}.ilike.*${enc(q)}*`).join(',')})`;
+        parts.push(`and=(${qOrStr},${utOrStr})`);
+      } else {
+        parts.push(`or=(${utConds.join(',')})`);
+      }
+    } else if (qOr) {
+      parts.push(qOr);
+    }
+  } else if (qOr) {
+    parts.push(qOr);
   }
 
   return parts.join('&');
@@ -1549,6 +1561,34 @@ function sortByEdificio(){
   _sortEdDir*=-1;
   th.textContent='Edifício / Condomínio '+(_sortEdDir===1?'↑':'↓');
   _curRows=[..._curRows].sort((a,b)=>(a.nomeEdificio||'').trim().localeCompare((b.nomeEdificio||'').trim(),'pt-BR')*_sortEdDir);
+  renderTable(_curRows);
+}
+
+const _sortDirs={};
+const _sortLabels={
+  'unidade':'Unidade','bairro':'Bairro / Setor','prop':'Proprietário',
+  'cpf':'CPF / CNPJ','area':'Área m²','venal':'Valor Venal','insc':'Inscrição'
+};
+function sortByCol(key,field,type){
+  _sortDirs[key]=(_sortDirs[key]||1)*-1;
+  const dir=_sortDirs[key];
+  // Reset todos os outros headers
+  ['unidade','bairro','prop','cpf','area','venal','insc'].forEach(k=>{
+    const el=document.getElementById('th-'+k);
+    if(el&&k!==key)el.innerHTML=_sortLabels[k]+' ↕';
+  });
+  const th=document.getElementById('th-'+key);
+  if(th)th.innerHTML=_sortLabels[key]+(dir===1?' ↑':' ↓');
+  _curRows=[..._curRows].sort((a,b)=>{
+    const av=a[field],bv=b[field];
+    if(av==null&&bv==null)return 0;
+    if(av==null)return 1;
+    if(bv==null)return -1;
+    if(type==='num'){
+      return(Number(av)||0-(Number(bv)||0))*dir;
+    }
+    return String(av).trim().localeCompare(String(bv).trim(),'pt-BR')*dir;
+  });
   renderTable(_curRows);
 }
 </script>
